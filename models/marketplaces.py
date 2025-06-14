@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import mapped_column, Mapped
-from .base import Base
+from models.base import Base
 
 
 class Marketplaces(Base):
