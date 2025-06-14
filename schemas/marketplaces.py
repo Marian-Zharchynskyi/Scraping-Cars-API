@@ -13,7 +13,6 @@ class MarketplaceBase(BaseModel):
     fuel_selector: str
     transmission_selector: str
     engine_capacity_selector: str
-    seats_selector: str
     horse_power_selector: str
     link_selector: str
     is_active: bool = True
@@ -30,7 +29,6 @@ class MarketplaceUpdate(BaseModel):
     fuel_selector: str | None = None
     transmission_selector: str | None = None
     engine_capacity_selector: str | None = None
-    seats_selector: str | None = None
     horse_power_selector: str | None = None
     link_selector: str | None = None
     is_active: bool | None = None

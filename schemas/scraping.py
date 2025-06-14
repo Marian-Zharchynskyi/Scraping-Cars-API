@@ -25,7 +25,6 @@ class ScrapingResult(BaseModel):
     fuel: Optional[str] = None
     transmission: Optional[str] = None
     engine_capacity: Optional[str] = None
-    seats: Optional[str] = None
     horse_power: Optional[str] = None
     url: str = ""
     scraped_at: datetime
@@ -56,7 +55,6 @@ class ScrapedCarResponse(BaseModel):
     fuel: Optional[str]
     transmission: Optional[str]
     engine_capacity: Optional[str]
-    seats: Optional[str]
     horse_power: Optional[str]
     car_url: str
     scraped_at: datetime

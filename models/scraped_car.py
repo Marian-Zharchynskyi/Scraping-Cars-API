@@ -18,7 +18,6 @@ class ScrapedCar(Base):
     fuel: Mapped[str] = mapped_column(String, nullable=True)
     transmission: Mapped[str] = mapped_column(String, nullable=True)
     engine_capacity: Mapped[str] = mapped_column(String, nullable=True)
-    seats: Mapped[str] = mapped_column(String, nullable=True)
     horse_power: Mapped[str] = mapped_column(String, nullable=True)
     car_url: Mapped[str] = mapped_column(String, nullable=False)
     scraped_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
