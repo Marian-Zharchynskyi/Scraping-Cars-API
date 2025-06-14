@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from api import marketplaces
+from api import marketplaces, car_scraping
 
 app = FastAPI()
 
@@ -16,6 +16,7 @@ app.add_middleware(
 )
 
 app.include_router(marketplaces.router)
+app.include_router(car_scraping.router)
 
 
 @app.get("/")

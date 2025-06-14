@@ -18,7 +18,7 @@ class Marketplaces(Base):
     fuel_selector: Mapped[str] = mapped_column(String, nullable=False)
     transmission_selector: Mapped[str] = mapped_column(String, nullable=False)
     engine_capacity_selector: Mapped[str] = mapped_column(String, nullable=False)
-    horse_power_selector: Mapped[str] = mapped_column(String, nullable=False)
+    horse_power_selector: Mapped[str] = mapped_column(String, nullable=True)
     link_selector: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
