@@ -26,17 +26,21 @@ def parse_price(price_str: str) -> tuple[str, Optional[str]]:
     # Remove any extra spaces and special characters
     price_str = price_str.strip()
 
+    # If there are multiple prices separated by "=", take the first one
+    if "=" in price_str:
+        price_str = price_str.split("=")[0].strip()
+
     # Extract currency (looking for $, грн, etc.)
     currency_match = re.search(r"(\$|грн|€)", price_str)
     currency = currency_match.group(0) if currency_match else None
 
-    # Extract numeric price (including dots and commas)
-    price_match = re.search(r"[\d\s\.,]+", price_str)
+    # Extract numeric price (including dots, commas and apostrophes)
+    price_match = re.search(r"[\d\s\.,']+", price_str)
     if not price_match:
         return "0", currency
 
     # Clean up the price string
-    clean_price = price_match.group(0).replace(" ", "").replace(",", ".")
+    clean_price = price_match.group(0).replace(" ", "").replace(",", ".").replace("'", "")
     # Remove any non-numeric characters except dot
     clean_price = re.sub(r"[^\d.]", "", clean_price)
 
