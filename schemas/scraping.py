@@ -11,6 +11,7 @@ class ScrapeCarRequest(BaseModel):
     min_year: Optional[int] = None
     max_year: Optional[int] = None
     marketplace_ids: Optional[List[int]] = None
+    limit: Optional[int] = 1
 
 
 class ScrapingResult(BaseModel):

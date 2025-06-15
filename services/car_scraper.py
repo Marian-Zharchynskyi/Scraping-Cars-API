@@ -2,7 +2,7 @@ import re
 import urllib.parse
 from datetime import datetime
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from bs4 import BeautifulSoup
 
 from playwright.async_api import async_playwright, TimeoutError
@@ -119,8 +119,8 @@ class CarScraper:
         pass
 
     async def scrape_car(
-        self, marketplace: Marketplaces, request_id: int, search_params: Dict[str, str]
-    ) -> ScrapedCarResponse:
+        self, marketplace: Marketplaces, request_id: int, search_params: Dict[str, str], limit: int = 1
+    ) -> List[ScrapedCarResponse]:
         logger.info(f"Starting car scraping for '{search_params}' on {marketplace.name} (ID: {request_id})")
 
         async with async_playwright() as p:
@@ -146,12 +146,152 @@ class CarScraper:
                     content = await page.content()
                     soup = BeautifulSoup(content, "html.parser")
 
-                    # Find the first car card
-                    car_element = soup.select_one(marketplace.car_selector)
+                    # Find all car cards up to the limit
+                    car_elements = soup.select(marketplace.car_selector)[:limit]
 
-                    if not car_element:
+                    if not car_elements:
                         logger.warning(f"No cars found for '{search_params}'")
-                        return ScrapedCarResponse(
+                        return [
+                            ScrapedCarResponse(
+                                id=0,
+                                request_id=request_id,
+                                marketplace_id=marketplace.id,
+                                car_title="",
+                                price="0",
+                                currency=None,
+                                year=None,
+                                mileage=None,
+                                fuel=None,
+                                transmission=None,
+                                engine_capacity=None,
+                                seats=None,
+                                horse_power=None,
+                                car_url="",
+                                status="not_found",
+                                error_message=f"No cars found for search params: {search_params}",
+                                scraped_at=datetime.now(),
+                            )
+                        ]
+
+                    results = []
+                    for car_element in car_elements:
+                        try:
+                            # Step 1: Get car link and title from the list using BeautifulSoup
+                            link_element = car_element.select_one(marketplace.link_selector)
+                            title_element = car_element.select_one(marketplace.title_selector)
+
+                            if not link_element:
+                                logger.error(f"Failed to extract car link using selector: {marketplace.link_selector}")
+                                continue
+
+                            if not title_element:
+                                logger.error(
+                                    f"Failed to extract car title using selector: {marketplace.title_selector}"
+                                )
+                                continue
+
+                            car_url = link_element.get("href")
+                            car_title = title_element.get_text(strip=True)
+
+                            if car_url and not car_url.startswith(("http://", "https://")):
+                                base_url = urllib.parse.urlparse(marketplace.base_search_url)
+                                car_url = f"{base_url.scheme}://{base_url.netloc}{car_url}"
+
+                            # Step 2: Navigate to car details page
+                            logger.info(f"Navigating to car details: {car_url}")
+                            await page.goto(car_url, wait_until="domcontentloaded", timeout=30000)
+
+                            # Get the page content and parse it with BeautifulSoup
+                            content = await page.content()
+                            soup = BeautifulSoup(content, "html.parser")
+                            # Extract detailed information using BeautifulSoup
+                            price_text = safe_get_text(soup, marketplace.price_selector)
+                            year_text = safe_get_text(soup, marketplace.year_selector)
+                            mileage_text = safe_get_text(soup, marketplace.mileage_selector)
+                            fuel = safe_get_text(soup, marketplace.fuel_selector)
+                            transmission = safe_get_text(soup, marketplace.transmission_selector)
+                            engine_capacity_text = safe_get_text(soup, marketplace.engine_capacity_selector)
+                            horse_power_text = safe_get_text(soup, marketplace.horse_power_selector)
+
+                            # Log raw values before parsing
+                            logger.info(f"Raw values from page:")
+                            logger.info(f"Price text: '{price_text}'")
+                            logger.info(f"Year text: '{year_text}'")
+                            logger.info(f"Mileage text: '{mileage_text}'")
+                            logger.info(f"Fuel text: '{fuel}'")
+                            logger.info(f"Transmission text: '{transmission}'")
+                            logger.info(f"Engine capacity text: '{engine_capacity_text}'")
+                            logger.info(f"Horse power text: '{horse_power_text}'")
+
+                            # Extract and parse all values
+                            price_str, currency = parse_price(price_text) if price_text else ("0", None)
+                            year = parse_year(year_text) if year_text else None
+                            mileage = parse_mileage(mileage_text) if mileage_text else None
+                            engine_capacity = (
+                                parse_engine_capacity(engine_capacity_text) if engine_capacity_text else None
+                            )
+                            horse_power = parse_horse_power(horse_power_text) if horse_power_text else None
+
+                            # Log parsed values
+                            logger.info(f"Parsed values:")
+                            logger.info(f"Price: {price_str} {currency}")
+                            logger.info(f"Year: {year}")
+                            logger.info(f"Mileage: {mileage}")
+                            logger.info(f"Fuel: {fuel}")
+                            logger.info(f"Transmission: {transmission}")
+                            logger.info(f"Engine capacity: {engine_capacity}")
+                            logger.info(f"Horse power: {horse_power}")
+
+                            logger.info(f"Successfully scraped: {car_title} - {price_str} {currency}")
+                            results.append(
+                                ScrapedCarResponse(
+                                    id=0,
+                                    request_id=request_id,
+                                    marketplace_id=marketplace.id,
+                                    car_title=car_title,
+                                    price=price_str,
+                                    currency=currency,
+                                    year=year,
+                                    mileage=mileage,
+                                    fuel=fuel,
+                                    transmission=transmission,
+                                    engine_capacity=engine_capacity,
+                                    horse_power=horse_power,
+                                    car_url=car_url,
+                                    status="success",
+                                    error_message=None,
+                                    scraped_at=datetime.now(),
+                                )
+                            )
+                        except Exception as e:
+                            logger.error(f"Error scraping car: {str(e)}")
+                            results.append(
+                                ScrapedCarResponse(
+                                    id=0,
+                                    request_id=request_id,
+                                    marketplace_id=marketplace.id,
+                                    car_title="",
+                                    price="0",
+                                    currency=None,
+                                    year=None,
+                                    mileage=None,
+                                    fuel=None,
+                                    transmission=None,
+                                    engine_capacity=None,
+                                    horse_power=None,
+                                    car_url="",
+                                    status="error_scraping",
+                                    error_message=str(e),
+                                    scraped_at=datetime.now(),
+                                )
+                            )
+
+                    return results
+
+                except TimeoutError as e:
+                    logger.error(f"Timeout error while scraping: {str(e)}")
+                    return [
+                        ScrapedCarResponse(
                             id=0,
                             request_id=request_id,
                             marketplace_id=marketplace.id,
@@ -163,99 +303,18 @@ class CarScraper:
                             fuel=None,
                             transmission=None,
                             engine_capacity=None,
-                            seats=None,
                             horse_power=None,
                             car_url="",
-                            status="not_found",
-                            error_message=f"No cars found for search params: {search_params}",
+                            status="error_timeout",
+                            error_message=str(e),
                             scraped_at=datetime.now(),
                         )
+                    ]
 
-                    # Step 1: Get car link and title from the list using BeautifulSoup
-                    link_element = car_element.select_one(marketplace.link_selector)
-                    title_element = car_element.select_one(marketplace.title_selector)
-
-                    if not link_element:
-                        logger.error(f"Failed to extract car link using selector: {marketplace.link_selector}")
-                        raise ValueError(f"Could not find car link element for marketplace {marketplace.name}")
-
-                    if not title_element:
-                        logger.error(f"Failed to extract car title using selector: {marketplace.title_selector}")
-                        raise ValueError(f"Could not find car title element for marketplace {marketplace.name}")
-
-                    car_url = link_element.get("href")
-                    car_title = title_element.get_text(strip=True)
-
-                    if car_url and not car_url.startswith(("http://", "https://")):
-                        base_url = urllib.parse.urlparse(marketplace.base_search_url)
-                        car_url = f"{base_url.scheme}://{base_url.netloc}{car_url}"
-
-                    # Step 2: Navigate to car details page
-                    logger.info(f"Navigating to car details: {car_url}")
-                    await page.goto(car_url, wait_until="domcontentloaded", timeout=30000)
-
-                    # Get the page content and parse it with BeautifulSoup
-                    content = await page.content()
-                    soup = BeautifulSoup(content, "html.parser")
-                    # Extract detailed information using BeautifulSoup
-                    price_text = safe_get_text(soup, marketplace.price_selector)
-                    year_text = safe_get_text(soup, marketplace.year_selector)
-                    mileage_text = safe_get_text(soup, marketplace.mileage_selector)
-                    fuel = safe_get_text(soup, marketplace.fuel_selector)
-                    transmission = safe_get_text(soup, marketplace.transmission_selector)
-                    engine_capacity_text = safe_get_text(soup, marketplace.engine_capacity_selector)
-                    horse_power_text = safe_get_text(soup, marketplace.horse_power_selector)
-
-                    # Log raw values before parsing
-                    logger.info(f"Raw values from page:")
-                    logger.info(f"Price text: '{price_text}'")
-                    logger.info(f"Year text: '{year_text}'")
-                    logger.info(f"Mileage text: '{mileage_text}'")
-                    logger.info(f"Fuel text: '{fuel}'")
-                    logger.info(f"Transmission text: '{transmission}'")
-                    logger.info(f"Engine capacity text: '{engine_capacity_text}'")
-                    logger.info(f"Horse power text: '{horse_power_text}'")
-
-                    # Extract and parse all values
-                    price_str, currency = parse_price(price_text) if price_text else ("0", None)
-                    year = parse_year(year_text) if year_text else None
-                    mileage = parse_mileage(mileage_text) if mileage_text else None
-                    engine_capacity = parse_engine_capacity(engine_capacity_text) if engine_capacity_text else None
-                    horse_power = parse_horse_power(horse_power_text) if horse_power_text else None
-
-                    # Log parsed values
-                    logger.info(f"Parsed values:")
-                    logger.info(f"Price: {price_str} {currency}")
-                    logger.info(f"Year: {year}")
-                    logger.info(f"Mileage: {mileage}")
-                    logger.info(f"Fuel: {fuel}")
-                    logger.info(f"Transmission: {transmission}")
-                    logger.info(f"Engine capacity: {engine_capacity}")
-                    logger.info(f"Horse power: {horse_power}")
-
-                    logger.info(f"Successfully scraped: {car_title} - {price_str} {currency}")
-                    return ScrapedCarResponse(
-                        id=0,
-                        request_id=request_id,
-                        marketplace_id=marketplace.id,
-                        car_title=car_title,
-                        price=price_str,
-                        currency=currency,
-                        year=year,
-                        mileage=mileage,
-                        fuel=fuel,
-                        transmission=transmission,
-                        engine_capacity=engine_capacity,
-                        horse_power=horse_power,
-                        car_url=car_url,
-                        status="success",
-                        error_message=None,
-                        scraped_at=datetime.now(),
-                    )
-
-                except TimeoutError:
-                    logger.error(f"Timeout error on {marketplace.name}")
-                    return ScrapedCarResponse(
+            except Exception as e:
+                logger.error(f"Error during scraping: {str(e)}")
+                return [
+                    ScrapedCarResponse(
                         id=0,
                         request_id=request_id,
                         marketplace_id=marketplace.id,
@@ -269,30 +328,10 @@ class CarScraper:
                         engine_capacity=None,
                         horse_power=None,
                         car_url="",
-                        status="error_scraping",
-                        error_message="Timeout waiting for car details",
+                        status="error",
+                        error_message=str(e),
                         scraped_at=datetime.now(),
                     )
-
-            except Exception as e:
-                logger.error(f"Scraping error on {marketplace.name}: {str(e)}")
-                return ScrapedCarResponse(
-                    id=0,
-                    request_id=request_id,
-                    marketplace_id=marketplace.id,
-                    car_title="",
-                    price="0",
-                    currency=None,
-                    year=None,
-                    mileage=None,
-                    fuel=None,
-                    transmission=None,
-                    engine_capacity=None,
-                    horse_power=None,
-                    car_url="",
-                    status="error_scraping",
-                    error_message=f"Scraping error: {str(e)}",
-                    scraped_at=datetime.now(),
-                )
+                ]
             finally:
                 await browser.close()

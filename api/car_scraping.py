@@ -37,6 +37,7 @@ async def scrape_car(
     """
     Scrape car information from specified marketplaces.
     If no marketplace_ids provided, scrape from all active marketplaces.
+    Limit parameter controls how many cars to scrape from each marketplace.
     """
     try:
         # Create search params dictionary
@@ -81,55 +82,57 @@ async def scrape_car(
 
         for marketplace in marketplaces:
             try:
-                scraped_data = await scraper.scrape_car(
+                scraped_cars = await scraper.scrape_car(
                     marketplace=marketplace,
                     request_id=scrape_request.id,
                     search_params=search_params,
+                    limit=request.limit,
                 )
 
-                scraped_car = ScrapedCar(
-                    request_id=scrape_request.id,
-                    marketplace_id=marketplace.id,
-                    car_title=scraped_data.car_title,
-                    price=scraped_data.price,
-                    currency=scraped_data.currency,
-                    year=scraped_data.year,
-                    mileage=scraped_data.mileage,
-                    fuel=scraped_data.fuel,
-                    transmission=scraped_data.transmission,
-                    engine_capacity=scraped_data.engine_capacity,
-                    horse_power=scraped_data.horse_power,
-                    car_url=scraped_data.car_url,
-                    scraped_at=scraped_data.scraped_at,
-                    status=scraped_data.status,
-                    error_message=scraped_data.error_message,
-                )
-                await scraped_cars_repo.create_scraped_car(scraped_car)
-
-                if scraped_data.status == "success":
-                    successful_scrapes += 1
-                else:
-                    failed_scrapes += 1
-
-                results.append(
-                    ScrapingResult(
-                        marketplace_name=marketplace.name,
-                        status=scraped_data.status,
+                for scraped_data in scraped_cars:
+                    scraped_car = ScrapedCar(
+                        request_id=scrape_request.id,
+                        marketplace_id=marketplace.id,
                         car_title=scraped_data.car_title,
-                        price=f"{scraped_data.price} {scraped_data.currency}"
-                        if scraped_data.currency
-                        else str(scraped_data.price),
+                        price=scraped_data.price,
+                        currency=scraped_data.currency,
                         year=scraped_data.year,
                         mileage=scraped_data.mileage,
                         fuel=scraped_data.fuel,
                         transmission=scraped_data.transmission,
                         engine_capacity=scraped_data.engine_capacity,
                         horse_power=scraped_data.horse_power,
-                        url=scraped_data.car_url,
+                        car_url=scraped_data.car_url,
                         scraped_at=scraped_data.scraped_at,
+                        status=scraped_data.status,
                         error_message=scraped_data.error_message,
                     )
-                )
+                    await scraped_cars_repo.create_scraped_car(scraped_car)
+
+                    if scraped_data.status == "success":
+                        successful_scrapes += 1
+                    else:
+                        failed_scrapes += 1
+
+                    results.append(
+                        ScrapingResult(
+                            marketplace_name=marketplace.name,
+                            status=scraped_data.status,
+                            car_title=scraped_data.car_title,
+                            price=f"{scraped_data.price} {scraped_data.currency}"
+                            if scraped_data.currency
+                            else str(scraped_data.price),
+                            year=scraped_data.year,
+                            mileage=scraped_data.mileage,
+                            fuel=scraped_data.fuel,
+                            transmission=scraped_data.transmission,
+                            engine_capacity=scraped_data.engine_capacity,
+                            horse_power=scraped_data.horse_power,
+                            url=scraped_data.car_url,
+                            scraped_at=scraped_data.scraped_at,
+                            error_message=scraped_data.error_message,
+                        )
+                    )
 
             except Exception as e:
                 failed_scrapes += 1
