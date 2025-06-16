@@ -9,6 +9,7 @@ from playwright.async_api import async_playwright, TimeoutError
 
 from models.marketplaces import Marketplaces
 from schemas.scraping import ScrapedCarResponse
+from services.autoria_url_generator import AutoriaUrlGenerator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +17,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+# Initialize Autoria URL generator
+autoria_generator = AutoriaUrlGenerator()
 
 
 def parse_price(price_str: str) -> tuple[str, Optional[str]]:
@@ -78,9 +82,45 @@ def parse_horse_power(power_str: str) -> Optional[str]:
     """Parse horse power string."""
     if not power_str:
         return None
-    # Extract horse power (e.g., "150", "200")
-    power_match = re.search(r"\d+", power_str)
-    return power_match.group(0) if power_match else None
+
+    logger.info(f"Parsing horse power from string: '{power_str}'")
+
+    # First try to find pattern like "211 к.с."
+    power_match = re.search(r"(\d+)\s*к\.с\.", power_str)
+    if power_match:
+        power = power_match.group(1)
+        logger.info(f"Found horse power: {power} к.с.")
+        return power
+
+    # If no match found, try to find any number followed by "к.с" or "к.с."
+    power_match = re.search(r"(\d+)\s*к\.?с", power_str)
+    if power_match:
+        power = power_match.group(1)
+        logger.info(f"Found horse power (alternative format): {power} к.с.")
+        return power
+
+    logger.warning(f"No horse power found in string: '{power_str}'")
+    return None
+
+
+def parse_fuel_type(fuel_str: str) -> Optional[str]:
+    """Parse fuel type string."""
+    if not fuel_str:
+        return None
+
+    logger.info(f"Parsing fuel type from string: '{fuel_str}'")
+
+    fuel_types = {"бензин": "Бензин", "дизель": "Дизель", "газ": "Газ", "електро": "Електро", "гібрид": "Гібрид"}
+
+    fuel_str_lower = fuel_str.lower()
+
+    for fuel_key, fuel_value in fuel_types.items():
+        if fuel_key in fuel_str_lower:
+            logger.info(f"Found fuel type: {fuel_value}")
+            return fuel_value
+
+    logger.warning(f"No fuel type found in string: '{fuel_str}'")
+    return None
 
 
 def format_search_url(base_url: str, params: Dict[str, str]) -> str:
@@ -100,6 +140,34 @@ def format_search_url(base_url: str, params: Dict[str, str]) -> str:
             if year_to:
                 url += f"&year[]={year_to}"
         return url
+
+    # For Autoria format
+    if "auto.ria.com" in base_url:
+        brand_name = params.get("brand", "")
+        model_name = params.get("model", "")
+        year_from = params.get("year_from", "")
+        year_to = params.get("year_to", "")
+        size = params.get("size", "20")
+
+        brand_id = autoria_generator.get_brand_id(brand_name)
+        model_id = autoria_generator.get_model_id(model_name)
+
+        if not brand_id or not model_id:
+            logger.error(f"Could not find brand ID for '{brand_name}' or model ID for '{model_name}'")
+            return base_url
+
+        search_params = {
+            "categories.main.id": 1,
+            "indexName": "auto,order_auto,newauto_search",
+            "brand.id[0]": brand_id,
+            "model.id[0]": model_id,
+            "year[0].gte": year_from,
+            "year[0].lte": year_to,
+            "size": size,
+        }
+
+        query_string = "&".join(f"{k}={v}" for k, v in search_params.items())
+        return f"{base_url}?{query_string}"
 
     # For other marketplaces, use query parameters
     query_params = urllib.parse.urlencode(params)
@@ -148,6 +216,7 @@ class CarScraper:
 
                     # Find all car cards up to the limit
                     car_elements = soup.select(marketplace.car_selector)[:limit]
+                    logger.info(f"Found {len(car_elements)} car cards using selector: {marketplace.car_selector}")
 
                     if not car_elements:
                         logger.warning(f"No cars found for '{search_params}'")
@@ -183,6 +252,10 @@ class CarScraper:
                             if not link_element:
                                 logger.error(f"Failed to extract car link using selector: {marketplace.link_selector}")
                                 continue
+
+                            logger.info(
+                                f"Found link element: {link_element.get('href') if link_element else 'None'} using selector: {marketplace.link_selector}"
+                            )
 
                             if not title_element:
                                 logger.error(
@@ -231,6 +304,7 @@ class CarScraper:
                                 parse_engine_capacity(engine_capacity_text) if engine_capacity_text else None
                             )
                             horse_power = parse_horse_power(horse_power_text) if horse_power_text else None
+                            fuel = parse_fuel_type(fuel) if fuel else None
 
                             # Log parsed values
                             logger.info(f"Parsed values:")
