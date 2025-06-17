@@ -23,7 +23,7 @@ autoria_generator = AutoriaUrlGenerator()
 
 
 def parse_price(price_str: str) -> tuple[str, Optional[str]]:
-    """Parse price string to extract formatted price and currency."""
+    
     if not price_str:
         return "0", None
 
@@ -52,7 +52,7 @@ def parse_price(price_str: str) -> tuple[str, Optional[str]]:
 
 
 def parse_mileage(mileage_str: str) -> Optional[int]:
-    """Parse mileage string to extract numeric value."""
+    
     if not mileage_str:
         return None
     # Remove all non-digit characters
@@ -61,7 +61,7 @@ def parse_mileage(mileage_str: str) -> Optional[int]:
 
 
 def parse_year(year_str: str) -> Optional[int]:
-    """Parse year string to extract numeric value."""
+    
     if not year_str:
         return None
     # Extract 4-digit year
@@ -70,7 +70,7 @@ def parse_year(year_str: str) -> Optional[int]:
 
 
 def parse_engine_capacity(capacity_str: str) -> Optional[str]:
-    """Parse engine capacity string."""
+    
     if not capacity_str:
         return None
     # Extract engine capacity (e.g., "2.0", "1.6")
@@ -79,7 +79,7 @@ def parse_engine_capacity(capacity_str: str) -> Optional[str]:
 
 
 def parse_horse_power(power_str: str) -> Optional[str]:
-    """Parse horse power string."""
+    
     if not power_str:
         return None
 
@@ -124,7 +124,7 @@ def parse_fuel_type(fuel_str: str) -> Optional[str]:
 
 
 def format_search_url(base_url: str, params: Dict[str, str]) -> str:
-    """Format search URL with parameters."""
+    
     # For RST format
     if "rst.ua" in base_url:
         brand = params.get("brand", "").lower()
@@ -175,7 +175,7 @@ def format_search_url(base_url: str, params: Dict[str, str]) -> str:
 
 
 def safe_get_text(soup: BeautifulSoup, selector: str) -> Optional[str]:
-    """Safely get text from element using selector."""
+    
     if not selector:
         return None
     element = soup.select_one(selector)

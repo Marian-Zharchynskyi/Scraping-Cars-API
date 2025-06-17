@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class ScrapeCarRequest(BaseModel):
-    """Request model for car scraping"""
+    
 
     car_brand: str
     car_model: str
@@ -15,7 +15,7 @@ class ScrapeCarRequest(BaseModel):
 
 
 class ScrapingResult(BaseModel):
-    """Individual marketplace scraping result"""
+    
 
     marketplace_name: str
     status: str
@@ -33,7 +33,7 @@ class ScrapingResult(BaseModel):
 
 
 class ScrapeCarResponse(BaseModel):
-    """Response model for car scraping"""
+    
 
     scrape_request_id: int
     car_brand: str
@@ -43,7 +43,7 @@ class ScrapeCarResponse(BaseModel):
 
 
 class ScrapedCarResponse(BaseModel):
-    """Response model for scraped car"""
+    
 
     id: int
     request_id: int

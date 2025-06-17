@@ -14,9 +14,7 @@ router = APIRouter(
 
 @router.get("/get-all", response_model=List[MarketplaceResponse])
 async def get_marketplaces(repo: MarketplacesRepositoryDependency, active_only: Optional[bool] = True):
-    """
-    Get all marketplaces.
-    """
+    
     try:
         marketplaces = await repo.get_marketplaces(active_only)
         if not marketplaces:
