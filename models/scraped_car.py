@@ -1,7 +1,11 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 from models.base import Base
+
+if TYPE_CHECKING:
+    from models.marketplaces import Marketplaces
 
 
 class ScrapedCar(Base):
@@ -23,3 +27,5 @@ class ScrapedCar(Base):
     scraped_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     status: Mapped[str] = mapped_column(String, nullable=False)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
+    
+    marketplace: Mapped["Marketplaces"] = relationship("Marketplaces", back_populates="scraped_cars")

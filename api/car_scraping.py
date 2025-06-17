@@ -34,11 +34,7 @@ async def scrape_car(
     scrape_requests_repo: ScrapeRequestsRepositoryDependency,
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    """
-    Scrape car information from specified marketplaces.
-    If no marketplace_ids provided, scrape from all active marketplaces.
-    Limit parameter controls how many cars to scrape from each marketplace.
-    """
+    
     try:
         # Create search params dictionary
         search_params = {
@@ -170,9 +166,7 @@ async def scrape_car(
 async def get_scrape_requests(
     scrape_requests_repo: ScrapeRequestsRepositoryDependency,
 ):
-    """
-    Get all scrape requests ordered by requested_at in descending order.
-    """
+    
     return await scrape_requests_repo.get_scrape_requests()
 
 
@@ -181,9 +175,7 @@ async def get_scrape_request(
     request_id: int,
     scrape_requests_repo: ScrapeRequestsRepositoryDependency,
 ):
-    """
-    Get a specific scrape request by ID.
-    """
+    
     request = await scrape_requests_repo.get_scrape_request(request_id)
     if not request:
         raise HTTPException(status_code=404, detail="Scrape request not found")
@@ -194,9 +186,7 @@ async def get_scrape_request(
 async def get_scraped_cars(
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    """
-    Get all scraped cars.
-    """
+    
     return await scraped_cars_repo.get_scraped_cars()
 
 
@@ -205,9 +195,7 @@ async def get_scraped_car(
     car_id: int,
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    """
-    Get a specific scraped car by ID.
-    """
+    
     car = await scraped_cars_repo.get_scraped_car(car_id)
     if not car:
         raise HTTPException(status_code=404, detail="Scraped car not found")
@@ -222,9 +210,7 @@ async def get_scraped_cars_by_request(
     request_id: int,
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    """
-    Get all scraped cars for a specific scrape request.
-    """
+    
     return await scraped_cars_repo.get_scraped_cars_by_request_id(request_id)
 
 

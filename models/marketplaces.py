@@ -1,7 +1,11 @@
 from datetime import datetime
+from typing import List, TYPE_CHECKING
 from sqlalchemy import Integer, String, DateTime, Boolean
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 from models.base import Base
+
+if TYPE_CHECKING:
+    from models.scraped_car import ScrapedCar
 
 
 class Marketplaces(Base):
@@ -25,3 +29,5 @@ class Marketplaces(Base):
         DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Relationship
+    scraped_cars: Mapped[List["ScrapedCar"]] = relationship("ScrapedCar", back_populates="marketplace", lazy="selectin")

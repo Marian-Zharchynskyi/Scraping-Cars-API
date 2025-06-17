@@ -1,12 +1,10 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from api import marketplaces, car_scraping
+from api import marketplaces, car_scraping, regression, export
 
 app = FastAPI()
 
-# CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,8 +15,5 @@ app.add_middleware(
 
 app.include_router(marketplaces.router)
 app.include_router(car_scraping.router)
-
-
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/docs")
+app.include_router(regression.router, prefix="/api/regression", tags=["regression"])
+app.include_router(export.router, prefix="/api", tags=["export"])
