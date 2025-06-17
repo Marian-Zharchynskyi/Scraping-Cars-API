@@ -69,34 +69,5 @@ class ScrapedCarsRepository:
         result = await self.context.execute(query)
         return result.scalars().all()
 
-    async def filter_cars_by_multiple_criteria(
-        self,
-        marketplace_id: int | None = None,
-        title: str | None = None,
-        min_price: float | None = None,
-        max_price: float | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-    ) -> List[ScrapedCar]:
-        """Filter cars by multiple criteria."""
-        conditions = []
-
-        if marketplace_id:
-            conditions.append(ScrapedCar.marketplace_id == marketplace_id)
-        if title:
-            conditions.append(ScrapedCar.car_title.ilike(f"%{title}%"))
-        if min_price is not None:
-            conditions.append(cast(ScrapedCar.price, Float) >= min_price)
-        if max_price is not None:
-            conditions.append(cast(ScrapedCar.price, Float) <= max_price)
-        if start_date:
-            conditions.append(ScrapedCar.scraped_at >= start_date)
-        if end_date:
-            conditions.append(ScrapedCar.scraped_at <= end_date)
-
-        query = select(ScrapedCar).where(and_(*conditions)).order_by(asc(ScrapedCar.scraped_at))
-        result = await self.context.execute(query)
-        return result.scalars().all()
-
 
 ScrapedCarsRepositoryDependency = Annotated[ScrapedCarsRepository, Depends(ScrapedCarsRepository)]

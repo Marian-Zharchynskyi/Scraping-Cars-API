@@ -290,26 +290,3 @@ async def filter_cars_by_date(
     Example: filter cars scraped between January 1, 2024 and January 31, 2024.
     """
     return await scraped_cars_repo.filter_cars_by_scrape_date(start_date, end_date)
-
-
-@router.post("/filter-cars", response_model=List[ScrapedCarResponse])
-async def filter_cars(
-    filter_params: CarFilterParams,
-    scraped_cars_repo: ScrapedCarsRepositoryDependency,
-):
-    """
-    Filter cars by multiple criteria.
-    You can combine any of the following filters:
-    - marketplace_id: Filter by specific marketplace
-    - title: Search in car titles
-    - min_price and max_price: Filter by price range
-    - start_date and end_date: Filter by scrape date range
-    """
-    return await scraped_cars_repo.filter_cars_by_multiple_criteria(
-        marketplace_id=filter_params.marketplace_id,
-        title=filter_params.title,
-        min_price=filter_params.min_price,
-        max_price=filter_params.max_price,
-        start_date=filter_params.start_date,
-        end_date=filter_params.end_date,
-    )
