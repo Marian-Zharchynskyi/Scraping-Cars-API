@@ -106,6 +106,26 @@ async def update_marketplace(
         raise HTTPException(status_code=500, detail=f"Error updating marketplace: {str(e)}")
 
 
+@router.patch("/update-status/{marketplace_id}", response_model=MarketplaceResponse)
+async def update_marketplace_status(
+    marketplace_id: int,
+    is_active: bool,
+    repo: MarketplacesRepositoryDependency,
+):
+    try:
+        updated_marketplace = await repo.update_marketplace_status(marketplace_id, is_active)
+        if not updated_marketplace:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Marketplace with ID {marketplace_id} not found",
+            )
+        return updated_marketplace
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating marketplace status: {str(e)}")
+
+
 @router.delete("/delete/{marketplace_id}")
 async def delete_marketplace(marketplace_id: int, repo: MarketplacesRepositoryDependency):
     try:

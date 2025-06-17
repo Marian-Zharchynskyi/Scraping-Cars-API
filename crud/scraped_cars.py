@@ -69,5 +69,26 @@ class ScrapedCarsRepository:
         result = await self.context.execute(query)
         return result.scalars().all()
 
+    async def delete_scraped_car(self, car_id: int) -> None:
+        session: AsyncSession = self.context
+        car = await self.get_scraped_car(car_id)
+        if car:
+            await session.delete(car)
+            await session.commit()
+
+    async def delete_cars_by_request_id(self, request_id: int) -> None:
+        session: AsyncSession = self.context
+        cars = await self.get_scraped_cars_by_request_id(request_id)
+        for car in cars:
+            await session.delete(car)
+        await session.commit()
+
+    async def delete_cars_by_marketplace(self, marketplace_id: int) -> None:
+        session: AsyncSession = self.context
+        cars = await self.get_cars_by_marketplace(marketplace_id)
+        for car in cars:
+            await session.delete(car)
+        await session.commit()
+
 
 ScrapedCarsRepositoryDependency = Annotated[ScrapedCarsRepository, Depends(ScrapedCarsRepository)]
