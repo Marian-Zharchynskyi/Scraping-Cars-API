@@ -1,4 +1,3 @@
-import re
 import urllib.parse
 from datetime import datetime
 import logging
@@ -10,6 +9,14 @@ from playwright.async_api import async_playwright, TimeoutError
 from models.marketplaces import Marketplaces
 from schemas.scraping import ScrapedCarResponse
 from services.autoria_url_generator import AutoriaUrlGenerator
+from services.parsers import (
+    parse_price,
+    parse_mileage,
+    parse_year,
+    parse_engine_capacity,
+    parse_horse_power,
+    parse_fuel_type,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,107 +27,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize Autoria URL generator
 autoria_generator = AutoriaUrlGenerator()
-
-
-def parse_price(price_str: str) -> tuple[str, Optional[str]]:
-    """Parse price string to extract formatted price and currency."""
-    if not price_str:
-        return "0", None
-
-    # Remove any extra spaces and special characters
-    price_str = price_str.strip()
-
-    # If there are multiple prices separated by "=", take the first one
-    if "=" in price_str:
-        price_str = price_str.split("=")[0].strip()
-
-    # Extract currency (looking for $, грн, etc.)
-    currency_match = re.search(r"(\$|грн|€)", price_str)
-    currency = currency_match.group(0) if currency_match else None
-
-    # Extract numeric price (including dots, commas and apostrophes)
-    price_match = re.search(r"[\d\s\.,']+", price_str)
-    if not price_match:
-        return "0", currency
-
-    # Clean up the price string
-    clean_price = price_match.group(0).replace(" ", "").replace(",", ".").replace("'", "")
-    # Remove any non-numeric characters except dot
-    clean_price = re.sub(r"[^\d.]", "", clean_price)
-
-    return clean_price, currency
-
-
-def parse_mileage(mileage_str: str) -> Optional[int]:
-    """Parse mileage string to extract numeric value."""
-    if not mileage_str:
-        return None
-    # Remove all non-digit characters
-    mileage = re.sub(r"[^\d]", "", mileage_str)
-    return int(mileage) if mileage else None
-
-
-def parse_year(year_str: str) -> Optional[int]:
-    """Parse year string to extract numeric value."""
-    if not year_str:
-        return None
-    # Extract 4-digit year
-    year_match = re.search(r"\b(19|20)\d{2}\b", year_str)
-    return int(year_match.group(0)) if year_match else None
-
-
-def parse_engine_capacity(capacity_str: str) -> Optional[str]:
-    """Parse engine capacity string."""
-    if not capacity_str:
-        return None
-    # Extract engine capacity (e.g., "2.0", "1.6")
-    capacity_match = re.search(r"\d+\.\d+", capacity_str)
-    return capacity_match.group(0) if capacity_match else None
-
-
-def parse_horse_power(power_str: str) -> Optional[str]:
-    """Parse horse power string."""
-    if not power_str:
-        return None
-
-    logger.info(f"Parsing horse power from string: '{power_str}'")
-
-    # First try to find pattern like "211 к.с."
-    power_match = re.search(r"(\d+)\s*к\.с\.", power_str)
-    if power_match:
-        power = power_match.group(1)
-        logger.info(f"Found horse power: {power} к.с.")
-        return power
-
-    # If no match found, try to find any number followed by "к.с" or "к.с."
-    power_match = re.search(r"(\d+)\s*к\.?с", power_str)
-    if power_match:
-        power = power_match.group(1)
-        logger.info(f"Found horse power (alternative format): {power} к.с.")
-        return power
-
-    logger.warning(f"No horse power found in string: '{power_str}'")
-    return None
-
-
-def parse_fuel_type(fuel_str: str) -> Optional[str]:
-    """Parse fuel type string."""
-    if not fuel_str:
-        return None
-
-    logger.info(f"Parsing fuel type from string: '{fuel_str}'")
-
-    fuel_types = {"бензин": "Бензин", "дизель": "Дизель", "газ": "Газ", "електро": "Електро", "гібрид": "Гібрид"}
-
-    fuel_str_lower = fuel_str.lower()
-
-    for fuel_key, fuel_value in fuel_types.items():
-        if fuel_key in fuel_str_lower:
-            logger.info(f"Found fuel type: {fuel_value}")
-            return fuel_value
-
-    logger.warning(f"No fuel type found in string: '{fuel_str}'")
-    return None
 
 
 def format_search_url(base_url: str, params: Dict[str, str]) -> str:

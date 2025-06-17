@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List
-from fastapi import APIRouter, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query
 import logging
+from pydantic import BaseModel
 
 from services.car_scraper import CarScraper
 from crud.marketplaces import MarketplacesRepositoryDependency
@@ -25,6 +26,15 @@ router = APIRouter(
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class CarFilterParams(BaseModel):
+    marketplace_id: Optional[int] = None
+    title: Optional[str] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
 
 @router.post("/scrape-car", response_model=ScrapeCarResponse)
@@ -226,3 +236,80 @@ async def get_scraped_cars_by_request(
     Get all scraped cars for a specific scrape request.
     """
     return await scraped_cars_repo.get_scraped_cars_by_request_id(request_id)
+
+
+@router.get("/get-cars-by-marketplace/{marketplace_id}", response_model=List[ScrapedCarResponse])
+async def get_cars_by_marketplace(
+    marketplace_id: int,
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    marketplaces_repo: MarketplacesRepositoryDependency,
+):
+    """
+    Get all cars scraped from a specific marketplace.
+    """
+    # Verify marketplace exists
+    marketplace = await marketplaces_repo.get_marketplace(marketplace_id)
+    if not marketplace:
+        raise HTTPException(status_code=404, detail="Marketplace not found")
+    return await scraped_cars_repo.get_cars_by_marketplace(marketplace_id)
+
+
+@router.get("/search-cars", response_model=List[ScrapedCarResponse])
+async def search_cars_by_title(
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    title: str = Query(..., description="Car title to search for"),
+):
+    """
+    Search cars by title (case-insensitive partial match).
+    Example: search for "Audi A4" will return all cars with "Audi A4" in their title.
+    """
+    return await scraped_cars_repo.search_cars_by_title(title)
+
+
+@router.get("/filter-cars/price", response_model=List[ScrapedCarResponse])
+async def filter_cars_by_price(
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    min_price: float = Query(..., description="Minimum price"),
+    max_price: float = Query(..., description="Maximum price"),
+):
+    """
+    Filter cars by price range.
+    Example: filter cars between $10,000 and $20,000.
+    """
+    return await scraped_cars_repo.filter_cars_by_price_range(min_price, max_price)
+
+
+@router.get("/filter-cars/date", response_model=List[ScrapedCarResponse])
+async def filter_cars_by_date(
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    start_date: datetime = Query(..., description="Start date"),
+    end_date: datetime = Query(..., description="End date"),
+):
+    """
+    Filter cars by scrape date range.
+    Example: filter cars scraped between January 1, 2024 and January 31, 2024.
+    """
+    return await scraped_cars_repo.filter_cars_by_scrape_date(start_date, end_date)
+
+
+@router.post("/filter-cars", response_model=List[ScrapedCarResponse])
+async def filter_cars(
+    filter_params: CarFilterParams,
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+):
+    """
+    Filter cars by multiple criteria.
+    You can combine any of the following filters:
+    - marketplace_id: Filter by specific marketplace
+    - title: Search in car titles
+    - min_price and max_price: Filter by price range
+    - start_date and end_date: Filter by scrape date range
+    """
+    return await scraped_cars_repo.filter_cars_by_multiple_criteria(
+        marketplace_id=filter_params.marketplace_id,
+        title=filter_params.title,
+        min_price=filter_params.min_price,
+        max_price=filter_params.max_price,
+        start_date=filter_params.start_date,
+        end_date=filter_params.end_date,
+    )
