@@ -14,23 +14,19 @@ class RegressionModel(Base):
     coefficients: Mapped[dict] = mapped_column(JSON, nullable=False)
     intercept: Mapped[float] = mapped_column(Float, nullable=False)
     
-    # Model quality metrics
     r_squared: Mapped[float] = mapped_column(Float, nullable=False)
     adj_r_squared: Mapped[float] = mapped_column(Float, nullable=True)
     f_statistic: Mapped[float] = mapped_column(Float, nullable=True)
     f_p_value: Mapped[float] = mapped_column(Float, nullable=True)
     n_observations: Mapped[int] = mapped_column(Integer, nullable=True)
     
-    # Detailed model statistics
     model_summary: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=True)
     
-    # Standard errors and confidence intervals
     standard_errors: Mapped[Dict[str, float]] = mapped_column(JSON, nullable=True)
     t_statistics: Mapped[Dict[str, float]] = mapped_column(JSON, nullable=True)
     p_values: Mapped[Dict[str, float]] = mapped_column(JSON, nullable=True)
     confidence_intervals: Mapped[Dict[str, tuple[float, float]]] = mapped_column(JSON, nullable=True)
     
-    # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     marketplace_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("marketplaces.id"), nullable=True)

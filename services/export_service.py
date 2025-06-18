@@ -78,10 +78,8 @@ class ExportService:
             selectinload(ScrapedCar.marketplace)
         )
         
-        # Apply filters
         stmt = self._apply_filters(stmt, export_request)
         
-        # Add order by
         stmt = stmt.order_by(ScrapedCar.id)
         
         result = await self.db.execute(stmt)
@@ -90,7 +88,6 @@ class ExportService:
         if not cars:
             raise ValueError("Не знайдено автомобілів за вказаними критеріями")
         
-        # Map user-friendly column names to actual model field names
         column_mapping = {
             'car_title': 'car_title',
             'year': 'year',
@@ -107,7 +104,6 @@ class ExportService:
                 if col in column_mapping:
                     columns.append({"name": column_mapping[col], "label": col})
                 else:
-                    # If column not found in mapping, use it as is
                     columns.append({"name": col, "label": col})
         else:
             columns = self._get_default_columns()
