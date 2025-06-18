@@ -22,14 +22,11 @@ async def export_to_csv(
         export_service = ExportService(db)
         csv_io = await export_service.export_to_csv(export_request)
         
-        # Генеруємо ім'я файлу з поточною датою
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"cars_export_{timestamp}.csv"
         
-        # Отримуємо значення з StringIO
         csv_content = csv_io.getvalue()
         
-        # Повертаємо відповідь з файлом
         response = StreamingResponse(
             iter([csv_content]),
             media_type="text/csv",

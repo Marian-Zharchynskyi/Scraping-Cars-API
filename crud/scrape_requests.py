@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.scrape_request import ScrapeRequest
 from db import SessionLocalDependency
 
-
 class ScrapeRequestsRepository:
     def __init__(self, context: SessionLocalDependency):
         self.context = context

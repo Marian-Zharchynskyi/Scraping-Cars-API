@@ -16,7 +16,7 @@ class ExportToCsvRequest(BaseModel):
     )
     max_year: Optional[int] = Field(
         None, 
-        ge=1900, 
+        ge=datetime.now().year -1, 
         le=datetime.now().year + 1,
         description="Максимальний рік випуску"
     )
