@@ -88,6 +88,12 @@ class RegressionService:
                         if car.engine_capacity
                         and car.engine_capacity.replace(".", "").replace(",", "").replace(" л", "").isdigit()
                         else None,
+                        "horse_power": float(car.horse_power.replace(" к.с.", "").replace(",", "."))
+                        if car.horse_power
+                        and car.horse_power.replace(".", "").replace(",", "").replace(" к.с.", "").isdigit()
+                        else None,
+                        "fuel": car.fuel,
+                        "transmission": car.transmission,
                         "search_position": idx + 1,
                     }
                     for idx, car in enumerate(data)
