@@ -34,7 +34,6 @@ async def scrape_car(
     scrape_requests_repo: ScrapeRequestsRepositoryDependency,
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    
     try:
         # Create search params dictionary
         search_params = {
@@ -166,7 +165,6 @@ async def scrape_car(
 async def get_scrape_requests(
     scrape_requests_repo: ScrapeRequestsRepositoryDependency,
 ):
-    
     return await scrape_requests_repo.get_scrape_requests()
 
 
@@ -175,7 +173,6 @@ async def get_scrape_request(
     request_id: int,
     scrape_requests_repo: ScrapeRequestsRepositoryDependency,
 ):
-    
     request = await scrape_requests_repo.get_scrape_request(request_id)
     if not request:
         raise HTTPException(status_code=404, detail="Scrape request not found")
@@ -186,7 +183,6 @@ async def get_scrape_request(
 async def get_scraped_cars(
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    
     return await scraped_cars_repo.get_scraped_cars()
 
 
@@ -195,7 +191,6 @@ async def get_scraped_car(
     car_id: int,
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    
     car = await scraped_cars_repo.get_scraped_car(car_id)
     if not car:
         raise HTTPException(status_code=404, detail="Scraped car not found")
@@ -210,7 +205,6 @@ async def get_scraped_cars_by_request(
     request_id: int,
     scraped_cars_repo: ScrapedCarsRepositoryDependency,
 ):
-    
     return await scraped_cars_repo.get_scraped_cars_by_request_id(request_id)
 
 
