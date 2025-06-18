@@ -101,13 +101,69 @@ class RegressionService:
                 ]
             )
 
-            df = df.dropna()
+            self.logger.info(f"Data shape before cleaning: {df.shape}")
+            self.logger.info(f"Null values before cleaning:")
+            for col in df.columns:
+                null_count = df[col].isnull().sum()
+                if null_count > 0:
+                    self.logger.info(f"  {col}: {null_count} null values")
 
-            if len(df) < 10:
-                raise ValueError(f"Not enough valid samples for training. Found {len(df)} samples.")
+            if "horse_power" in df.columns:
+                hp_mean = df["horse_power"].mean()
+                if pd.isna(hp_mean):
+                    hp_mean = 150.0  
+                df["horse_power"] = df["horse_power"].fillna(hp_mean)
+                self.logger.info(
+                    f"Filled {df['horse_power'].isnull().sum()} null horse_power values with mean: {hp_mean}"
+                )
 
-            X = df[request.feature_variables]
-            y = df[request.target_variable]
+            if "engine_volume" in df.columns:
+                ev_mean = df["engine_volume"].mean()
+                if pd.isna(ev_mean):
+                    ev_mean = 2.0  
+                df["engine_volume"] = df["engine_volume"].fillna(ev_mean)
+                self.logger.info(
+                    f"Filled {df['engine_volume'].isnull().sum()} null engine_volume values with mean: {ev_mean}"
+                )
+
+            if "mileage" in df.columns:
+                mileage_mean = df["mileage"].mean()
+                if pd.isna(mileage_mean):
+                    mileage_mean = 100000  
+                df["mileage"] = df["mileage"].fillna(mileage_mean)
+                self.logger.info(f"Filled {df['mileage'].isnull().sum()} null mileage values with mean: {mileage_mean}")
+
+            required_features = [f for f in request.feature_variables if f in df.columns]
+            df_cleaned = df.dropna(subset=required_features + [request.target_variable])
+
+            self.logger.info(f"Data shape after cleaning: {df_cleaned.shape}")
+
+            if "price" in df_cleaned.columns:
+                price_q1 = df_cleaned["price"].quantile(0.01)
+                price_q99 = df_cleaned["price"].quantile(0.99)
+                df_cleaned = df_cleaned[(df_cleaned["price"] >= price_q1) & (df_cleaned["price"] <= price_q99)]
+                self.logger.info(f"Removed outliers: price range [{price_q1:.0f}, {price_q99:.0f}]")
+
+            if "horse_power" in df_cleaned.columns:
+                hp_q1 = df_cleaned["horse_power"].quantile(0.01)
+                hp_q99 = df_cleaned["horse_power"].quantile(0.99)
+                df_cleaned = df_cleaned[(df_cleaned["horse_power"] >= hp_q1) & (df_cleaned["horse_power"] <= hp_q99)]
+                self.logger.info(f"Removed outliers: horse_power range [{hp_q1:.0f}, {hp_q99:.0f}]")
+
+            if len(df_cleaned) < 10:
+                raise ValueError(
+                    f"Not enough valid samples for training. Found {len(df_cleaned)} samples after cleaning."
+                )
+
+            self.logger.info(f"Final data statistics:")
+            for col in df_cleaned.columns:
+                if df_cleaned[col].dtype in ["int64", "float64"]:
+                    self.logger.info(
+                        f"  {col}: mean={df_cleaned[col].mean():.2f}, std={df_cleaned[col].std():.2f}, min={df_cleaned[col].min():.2f}, max={df_cleaned[col].max():.2f}"
+                    )
+
+            X = df_cleaned[request.feature_variables]
+            y = df_cleaned[request.target_variable]
 
             self.fit_linear_regression(X, y)
 
@@ -231,7 +287,47 @@ class RegressionService:
             for feature in model.feature_variables:
                 if feature not in request.features:
                     raise ValueError(f"Missing required feature: {feature}")
-                input_features[feature] = request.features[feature]
+
+                value = request.features[feature]
+
+                # Обробка null значень та конвертація типів
+                if value is None:
+                    # Замінюємо null на розумні значення за замовчуванням
+                    if feature == "horse_power":
+                        value = 150.0  # Середня потужність
+                    elif feature == "engine_volume":
+                        value = 2.0  # Середній об'єм двигуна
+                    elif feature == "mileage":
+                        value = 100000  # Середній пробіг
+                    elif feature == "year":
+                        value = 2020  # Середній рік
+                    else:
+                        raise ValueError(f"Cannot handle null value for feature: {feature}")
+
+                # Конвертуємо рядки в числа
+                if isinstance(value, str):
+                    if feature in ["horse_power", "engine_volume", "price"]:
+                        # Видаляємо одиниці виміру
+                        clean_value = value.replace(" к.с.", "").replace(" л", "").replace(",", ".")
+                        try:
+                            input_features[feature] = float(clean_value)
+                        except ValueError:
+                            raise ValueError(f"Invalid {feature} value: {value}. Expected number.")
+                    elif feature in ["year", "mileage", "search_position"]:
+                        try:
+                            input_features[feature] = int(value)
+                        except ValueError:
+                            raise ValueError(f"Invalid {feature} value: {value}. Expected integer.")
+                    else:
+                        input_features[feature] = value
+                else:
+                    # Числові значення
+                    if feature in ["horse_power", "engine_volume", "price"]:
+                        input_features[feature] = float(value)
+                    elif feature in ["year", "mileage", "search_position"]:
+                        input_features[feature] = int(value)
+                    else:
+                        input_features[feature] = value
 
             X = pd.DataFrame([input_features])
 
@@ -241,13 +337,47 @@ class RegressionService:
             prediction = model.intercept
             for feature, coef in model.coefficients.items():
                 if feature != "const":
-                    prediction += coef * X[feature].values[0]
+                    prediction += coef * X[feature].iloc[0]
+
+            # Валідація прогнозування для цін
+            original_prediction = prediction
+            if model.target_variable == "price":
+                # Обмежуємо мінімальну ціну до розумного значення
+                prediction = max(prediction, 1000)
+
+                # Додаткова валідація на основі вхідних даних
+                if "year" in input_features:
+                    # Базова ціна залежно від року
+                    min_price_by_year = {
+                        2010: 2000,
+                        2011: 2500,
+                        2012: 3000,
+                        2013: 3500,
+                        2014: 4000,
+                        2015: 4500,
+                        2016: 5000,
+                        2017: 6000,
+                        2018: 7000,
+                        2019: 8000,
+                        2020: 9000,
+                        2021: 10000,
+                        2022: 12000,
+                        2023: 14000,
+                        2024: 16000,
+                    }
+                    min_price = min_price_by_year.get(input_features["year"], 1000)
+                    prediction = max(prediction, min_price)
 
             return {
                 "success": True,
                 "prediction": float(prediction),
                 "model_id": model.id,
                 "features_used": input_features,
+                "prediction_details": {
+                    "original_prediction": float(original_prediction),
+                    "validation_applied": model.target_variable == "price",
+                    "null_values_handled": any(v is None for v in request.features.values()),
+                },
             }
 
         except Exception as e:
