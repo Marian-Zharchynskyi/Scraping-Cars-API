@@ -1,0 +1,241 @@
+{
+  "info": {
+    "_postman_id": "regression-api-collection",
+    "name": "Regression & Export API Collection",
+    "description": "Колекція запитів для API регресійного аналізу та експорту даних автомобілів",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Train Model",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"target_variable\": \"price\",\n  \"feature_variables\": [\"year\", \"mileage\", \"engine_volume\"],\n  \"marketplace_id\": 1,\n  \"car_brands\": [\"BMW\", \"Audi\", \"Mercedes\"],\n  \"test_size\": 0.2,\n  \"random_state\": 42\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/regression/train/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "train", ""]
+        },
+        "description": "Навчання нової регресійної моделі для прогнозування ціни автомобіля"
+      },
+      "response": []
+    },
+    {
+      "name": "Make Prediction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"target_variable\": \"price\",\n  \"features\": {\n    \"year\": 2020,\n    \"mileage\": 50000,\n    \"engine_volume\": 2.0\n  },\n  \"marketplace_id\": 1,\n  \"model_id\": 1\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/regression/predict/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "predict", ""]
+        },
+        "description": "Прогнозування ціни автомобіля на основі навченої моделі"
+      },
+      "response": []
+    },
+    {
+      "name": "List Models",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/regression/models/?skip=0&limit=10&marketplace_id=1&is_active=true",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "models", ""],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0",
+              "description": "Кількість записів для пропуску"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Максимальна кількість записів"
+            },
+            {
+              "key": "marketplace_id",
+              "value": "1",
+              "description": "ID майданчику для фільтрації"
+            },
+            {
+              "key": "is_active",
+              "value": "true",
+              "description": "Фільтр за активними моделями"
+            }
+          ]
+        },
+        "description": "Отримання списку всіх регресійних моделей з фільтрацією"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Model by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/regression/models/1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "models", "1"]
+        },
+        "description": "Отримання конкретної регресійної моделі за ID"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Model",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Оновлена модель ціни\",\n  \"is_active\": true,\n  \"description\": \"Оновлений опис моделі для прогнозування ціни\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/regression/models/1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "models", "1"]
+        },
+        "description": "Оновлення існуючої регресійної моделі"
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Model",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/regression/models/1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "models", "1"]
+        },
+        "description": "Видалення регресійної моделі за ID"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Feature Importance",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/regression/models/1/importance",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "models", "1", "importance"]
+        },
+        "description": "Отримання важливості ознак для конкретної моделі"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Coefficients Plot",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/regression/models/1/coefficients-plot",
+          "host": ["{{base_url}}"],
+          "path": ["api", "regression", "models", "1", "coefficients-plot"]
+        },
+        "description": "Отримання графіка коефіцієнтів регресії у вигляді PNG зображення"
+      },
+      "response": []
+    },
+    {
+      "name": "Export to CSV",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"car_model\": \"BMW\",\n  \"min_year\": 2020,\n  \"max_year\": 2024,\n  \"min_price\": 20000,\n  \"max_price\": 100000,\n  \"marketplace_ids\": [1, 2],\n  \"include_columns\": [\"id\", \"brand\", \"model\", \"year\", \"price\", \"mileage\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/export/csv",
+          "host": ["{{base_url}}"],
+          "path": ["api", "export", "csv"]
+        },
+        "description": "Експорт даних автомобілів у CSV файл з фільтрацією"
+      },
+      "response": []
+    },
+    {
+      "name": "Export All to CSV",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/export/csv",
+          "host": ["{{base_url}}"],
+          "path": ["api", "export", "csv"]
+        },
+        "description": "Експорт всіх даних автомобілів у CSV файл без фільтрів"
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Базовий URL API сервера"
+    }
+  ]
+}

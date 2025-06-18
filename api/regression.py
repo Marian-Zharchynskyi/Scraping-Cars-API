@@ -1,24 +1,17 @@
+from typing import List, Dict, Any, Sequence, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict, Any
 
 from db import get_db
 from schemas.regression_model import (
-    RegressionModel, 
+    RegressionModel,
     RegressionModelUpdate,
     ModelTrainingResponse,
     ModelTrainingRequest,
-    ModelPredictionRequest
+    ModelPredictionRequest,
 )
-
 from services.regression_service import RegressionService
-from crud.regression_model import (
-    get_model, 
-    get_models, 
-    update_model, 
-    delete_model
-)
+from crud.regression_model import RegressionModelRepositoryDependency
 
 router = APIRouter(
     prefix="/api/regression",
@@ -26,167 +19,181 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.post(
-    "/train/", 
+    "/train/",
     response_model=ModelTrainingResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     summary="Train a new regression model",
-    description="Train a regression model to predict target variable based on provided features"
+    description="Train a regression model to predict target variable based on provided features",
 )
 async def train_model(
     request: ModelTrainingRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    """
-    Train a new regression model with the provided parameters.
-    
-    - **target_variable**: The variable to predict (e.g., 'price')
-    - **feature_variables**: List of features to use for prediction (e.g., ['year', 'mileage', 'engine_volume'])
-    - **marketplace_id**: Marketplace ID to filter data
-    - **car_brands**: Optional list of car brands to include
-    - **test_size**: Size of the test set (default: 0.2)
-    - **random_state**: Random seed for reproducibility (default: 42)
-    """
     try:
         service = RegressionService(db)
         result = await service.train_model(request)
-        
-        if not result.get('success', False):
+
+        if not result.get("success", False):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get('error', 'Failed to train model')
+                status_code=status.HTTP_400_BAD_REQUEST, detail=result.get("error", "Failed to train model")
             )
-            
-        # Include all fields from ModelTrainingResponse
+
         response_data = {
-            'success': True,
-            'model_id': result['model_id'],
-            'r_squared': result['r_squared'],
-            'adj_r_squared': result.get('adj_r_squared'),
-            'f_statistic': result.get('f_statistic'),
-            'f_p_value': result.get('f_p_value'),
-            'n_observations': result.get('n_observations'),
-            'coefficients': result['coefficients'],
-            'intercept': result['intercept'],
-            'standard_errors': result.get('standard_errors', {}),
-            't_statistics': result.get('t_statistics', {}),
-            'p_values': result.get('p_values', {}),
-            'confidence_intervals': result.get('confidence_intervals', {}),
-            'message': result.get('message', 'Model trained successfully')
+            "success": True,
+            "model_id": result["model_id"],
+            "r_squared": result["r_squared"],
+            "adj_r_squared": result.get("adj_r_squared"),
+            "f_statistic": result.get("f_statistic"),
+            "f_p_value": result.get("f_p_value"),
+            "n_observations": result.get("n_observations"),
+            "coefficients": result["coefficients"],
+            "intercept": result["intercept"],
+            "standard_errors": result.get("standard_errors", {}),
+            "t_statistics": result.get("t_statistics", {}),
+            "p_values": result.get("p_values", {}),
+            "confidence_intervals": result.get("confidence_intervals", {}),
+            "message": result.get("message", "Model trained successfully"),
         }
         return response_data
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error training model: {str(e)}"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error training model: {str(e)}")
+
 
 @router.post(
-    "/predict/", 
+    "/predict/",
     response_model=Dict[str, Any],
     summary="Make a prediction using a trained model",
-    description="Predict the target variable using a pre-trained regression model"
+    description="Predict the target variable using a pre-trained regression model",
 )
 async def make_prediction(
-    request: ModelPredictionRequest,
-    db: AsyncSession = Depends(get_db)
+    request: ModelPredictionRequest, repo: RegressionModelRepositoryDependency, db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
-    """
-    Make a prediction using a pre-trained regression model.
-    
-    - **target_variable**: The target variable to predict (e.g., 'price')
-    - **features**: Dictionary of feature values (e.g., {'year': 2020, 'mileage': 50000, 'engine_volume': 1.8})
-    - **marketplace_id**: Marketplace ID to select the model
-    """
     try:
         service = RegressionService(db)
         result = await service.predict(request)
-        
-        if not result.get('success', False):
+
+        if not result.get("success", False):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get('error', 'Failed to make prediction')
+                status_code=status.HTTP_400_BAD_REQUEST, detail=result.get("error", "Failed to make prediction")
             )
-            
+
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error making prediction: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error making prediction: {str(e)}"
         )
+
 
 @router.get("/models/", response_model=List[RegressionModel])
 async def list_models(
-    skip: int = 0, 
+    repo: RegressionModelRepositoryDependency,
+    skip: int = 0,
     limit: int = 100,
-    marketplace_id: int | None = None,
-    is_active: bool | None = None,
-    db: AsyncSession = Depends(get_db)
-):
-    
-    return await get_models(
-        db=db,
-        skip=skip,
-        limit=limit,
-        marketplace_id=marketplace_id,
-        is_active=is_active
-    )
+    marketplace_id: Optional[int] = None,
+    is_active: Optional[bool] = None,
+) -> Sequence[RegressionModel]:
+    try:
+        models = await repo.get_models(skip=skip, limit=limit, marketplace_id=marketplace_id, is_active=is_active)
+        if not models:
+            raise HTTPException(status_code=404, detail="No models found")
+        return models
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving models: {str(e)}")
+
 
 @router.get("/models/{model_id}", response_model=RegressionModel)
-async def read_model(model_id: int, db: AsyncSession = Depends(get_db)):
-    db_model = await get_model(db, model_id=model_id)
-    if db_model is None:
-        raise HTTPException(status_code=404, detail="Model not found")
-    return db_model
+async def read_model(model_id: int, repo: RegressionModelRepositoryDependency) -> RegressionModel:
+    try:
+        db_model = await repo.get_model(model_id=model_id)
+        if db_model is None:
+            raise HTTPException(status_code=404, detail=f"Model with ID {model_id} not found")
+        return db_model
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving model: {str(e)}")
+
 
 @router.put("/models/{model_id}", response_model=RegressionModel)
 async def update_existing_model(
-    model_id: int, 
-    model_update: RegressionModelUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-    db_model = await get_model(db, model_id=model_id)
-    if db_model is None:
-        raise HTTPException(status_code=404, detail="Model not found")
-    return await update_model(db, db_model=db_model, model_update=model_update)
+    model_id: int, model_update: RegressionModelUpdate, repo: RegressionModelRepositoryDependency
+) -> RegressionModel:
+    try:
+        existing = await repo.get_model(model_id=model_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Model with ID {model_id} not found")
 
-@router.delete("/models/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_model(model_id: int, db: AsyncSession = Depends(get_db)):
-    db_model = await get_model(db, model_id=model_id)
-    if db_model is None:
-        raise HTTPException(status_code=404, detail="Model not found")
-    await delete_model(db, model_id=model_id)
-    return {"ok": True}
+        updated_model = await repo.update_model(model_id=model_id, model_update=model_update)
+        if updated_model is None:
+            raise HTTPException(status_code=404, detail="Updated model not found")
+        return updated_model
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating model: {str(e)}")
+
+
+@router.delete("/models/{model_id}", status_code=status.HTTP_200_OK, response_model=Dict[str, str])
+async def remove_model(model_id: int, repo: RegressionModelRepositoryDependency) -> Dict[str, str]:
+    try:
+        existing = await repo.get_model(model_id=model_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Model with ID {model_id} not found")
+
+        success = await repo.delete_model(model_id=model_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete model")
+
+        return {"status": "success", "message": f"Model with ID {model_id} deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting model: {str(e)}")
+
 
 @router.get("/models/{model_id}/importance", response_model=dict)
-async def get_feature_importance(model_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Get feature importance metrics for a trained model.
-    
-    - **model_id**: ID of the model to get importance for
-    """
-    service = RegressionService(db)
-    return await service.get_model_importance(model_id)
+async def get_feature_importance(
+    model_id: int, repo: RegressionModelRepositoryDependency, db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    try:
+        existing_model = await repo.get_model(model_id=model_id)
+        if not existing_model:
+            raise HTTPException(status_code=404, detail=f"Model with ID {model_id} not found")
+
+        service = RegressionService(db)
+        importance = await service.get_model_importance(model_id)
+        return {"success": True, "data": importance}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to get feature importance: {str(e)}"
+        )
+
 
 @router.get("/models/{model_id}/coefficients-plot", response_class=Response)
 async def get_coefficients_plot(
-    model_id: int, 
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Generate and return a visualization of model coefficients and feature importance.
-    
-    - **model_id**: ID of the model to visualize
-    
-    Returns:
-        PNG image of the coefficients plot
-    """
-    service = RegressionService(db)
+    model_id: int, repo: RegressionModelRepositoryDependency, db: AsyncSession = Depends(get_db)
+) -> Response:
     try:
+        existing_model = await repo.get_model(model_id=model_id)
+        if not existing_model:
+            raise HTTPException(status_code=404, detail=f"Model with ID {model_id} not found")
+
+        service = RegressionService(db)
         img_data = await service.get_coefficients_plot(model_id)
         return Response(content=img_data, media_type="image/png")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to generate coefficients plot: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to generate coefficients plot: {str(e)}"
         )
