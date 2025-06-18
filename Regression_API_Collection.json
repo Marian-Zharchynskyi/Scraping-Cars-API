@@ -1,217 +1,433 @@
 {
   "info": {
-    "_postman_id": "regression-api-collection",
-    "name": "Regression & Export API Collection",
-    "description": "Колекція запитів для API регресійного аналізу та експорту даних автомобілів",
+    "_postman_id": "your-collection-id",
+    "name": "Car Scraping API",
+    "description": "API collection for car scraping and regression analysis",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Train Model",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"target_variable\": \"price\",\n  \"feature_variables\": [\"year\", \"mileage\", \"engine_volume\"],\n  \"marketplace_id\": 1,\n  \"car_brands\": [\"BMW\", \"Audi\", \"Mercedes\"],\n  \"test_size\": 0.2,\n  \"random_state\": 42\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/api/regression/train/",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "train", ""]
-        },
-        "description": "Навчання нової регресійної моделі для прогнозування ціни автомобіля"
-      },
-      "response": []
-    },
-    {
-      "name": "Make Prediction",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"target_variable\": \"price\",\n  \"features\": {\n    \"year\": 2020,\n    \"mileage\": 50000,\n    \"engine_volume\": 2.0\n  },\n  \"marketplace_id\": 1,\n  \"model_id\": 1\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/api/regression/predict/",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "predict", ""]
-        },
-        "description": "Прогнозування ціни автомобіля на основі навченої моделі"
-      },
-      "response": []
-    },
-    {
-      "name": "List Models",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/api/regression/models/?skip=0&limit=10&marketplace_id=1&is_active=true",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "models", ""],
-          "query": [
-            {
-              "key": "skip",
-              "value": "0",
-              "description": "Кількість записів для пропуску"
+      "name": "Car Scraping",
+      "item": [
+        {
+          "name": "Scrape Cars",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"marketplace_id\": 1,\n    \"search_params\": {\n        \"brand\": \"BMW\",\n        \"model\": \"X5\",\n        \"year_from\": \"2020\",\n        \"year_to\": \"2024\"\n    },\n    \"limit\": 50\n}"
             },
-            {
-              "key": "limit",
-              "value": "10",
-              "description": "Максимальна кількість записів"
-            },
-            {
-              "key": "marketplace_id",
-              "value": "1",
-              "description": "ID майданчику для фільтрації"
-            },
-            {
-              "key": "is_active",
-              "value": "true",
-              "description": "Фільтр за активними моделями"
+            "url": {
+              "raw": "{{base_url}}/car-scraping/scrape",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "scrape"]
             }
-          ]
-        },
-        "description": "Отримання списку всіх регресійних моделей з фільтрацією"
-      },
-      "response": []
-    },
-    {
-      "name": "Get Model by ID",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/api/regression/models/1",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "models", "1"]
-        },
-        "description": "Отримання конкретної регресійної моделі за ID"
-      },
-      "response": []
-    },
-    {
-      "name": "Update Model",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Оновлена модель ціни\",\n  \"is_active\": true,\n  \"description\": \"Оновлений опис моделі для прогнозування ціни\"\n}"
         },
-        "url": {
-          "raw": "{{base_url}}/api/regression/models/1",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "models", "1"]
-        },
-        "description": "Оновлення існуючої регресійної моделі"
-      },
-      "response": []
-    },
-    {
-      "name": "Delete Model",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/api/regression/models/1",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "models", "1"]
-        },
-        "description": "Видалення регресійної моделі за ID"
-      },
-      "response": []
-    },
-    {
-      "name": "Get Feature Importance",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/api/regression/models/1/importance",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "models", "1", "importance"]
-        },
-        "description": "Отримання важливості ознак для конкретної моделі"
-      },
-      "response": []
-    },
-    {
-      "name": "Get Coefficients Plot",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/api/regression/models/1/coefficients-plot",
-          "host": ["{{base_url}}"],
-          "path": ["api", "regression", "models", "1", "coefficients-plot"]
-        },
-        "description": "Отримання графіка коефіцієнтів регресії у вигляді PNG зображення"
-      },
-      "response": []
-    },
-    {
-      "name": "Export to CSV",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "Get All Scrape Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/get-all-requests",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "get-all-requests"]
+            }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"car_model\": \"BMW\",\n  \"min_year\": 2020,\n  \"max_year\": 2024,\n  \"min_price\": 20000,\n  \"max_price\": 100000,\n  \"marketplace_ids\": [1, 2],\n  \"include_columns\": [\"id\", \"brand\", \"model\", \"year\", \"price\", \"mileage\"]\n}"
         },
-        "url": {
-          "raw": "{{base_url}}/api/export/csv",
-          "host": ["{{base_url}}"],
-          "path": ["api", "export", "csv"]
+        {
+          "name": "Get Scrape Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/get-request-by-id/:request_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "get-request-by-id", ":request_id"],
+              "variable": [
+                {
+                  "key": "request_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
         },
-        "description": "Експорт даних автомобілів у CSV файл з фільтрацією"
-      },
-      "response": []
+        {
+          "name": "Get All Scraped Cars",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/get-all-cars",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "get-all-cars"]
+            }
+          }
+        },
+        {
+          "name": "Get Car by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/get-car-by-id/:car_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "get-car-by-id", ":car_id"],
+              "variable": [
+                {
+                  "key": "car_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cars by Request ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/get-cars-by-request-id/:request_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "get-cars-by-request-id", ":request_id"],
+              "variable": [
+                {
+                  "key": "request_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cars by Marketplace",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/get-cars-by-marketplace/:marketplace_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "get-cars-by-marketplace", ":marketplace_id"],
+              "variable": [
+                {
+                  "key": "marketplace_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Request",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/delete-request/:request_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "delete-request", ":request_id"],
+              "variable": [
+                {
+                  "key": "request_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Car",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/delete-car/:car_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "delete-car", ":car_id"],
+              "variable": [
+                {
+                  "key": "car_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Cars by Marketplace",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/car-scraping/delete-cars-by-marketplace/:marketplace_id",
+              "host": ["{{base_url}}"],
+              "path": ["car-scraping", "delete-cars-by-marketplace", ":marketplace_id"],
+              "variable": [
+                {
+                  "key": "marketplace_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
-      "name": "Export All to CSV",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+      "name": "Regression",
+      "item": [
+        {
+          "name": "Train Model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"marketplace_id\": 1,\n    \"features\": [\"year\", \"mileage\", \"engine_capacity\"],\n    \"target\": \"price\",\n    \"car_brands\": [\"BMW\", \"Audi\", \"Mercedes\"],\n    \"test_size\": 0.2,\n    \"random_state\": 42\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/regression/train/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "regression", "train"]
+            }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{}"
         },
-        "url": {
-          "raw": "{{base_url}}/api/export/csv",
-          "host": ["{{base_url}}"],
-          "path": ["api", "export", "csv"]
+        {
+          "name": "Make Prediction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"model_id\": 1,\n    \"features\": {\n        \"year\": 2020,\n        \"mileage\": 50000,\n        \"engine_capacity\": 2.0\n    }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/regression/predict/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "regression", "predict"]
+            }
+          }
         },
-        "description": "Експорт всіх даних автомобілів у CSV файл без фільтрів"
-      },
-      "response": []
+        {
+          "name": "List Models",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/regression/models/?skip=0&limit=100&marketplace_id=1&is_active=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "regression", "models"],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "key": "marketplace_id",
+                  "value": "1"
+                },
+                {
+                  "key": "is_active",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Model by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/regression/models/:model_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "regression", "models", ":model_id"],
+              "variable": [
+                {
+                  "key": "model_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Model",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"is_active\": true,\n    \"description\": \"Updated model description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/regression/models/:model_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "regression", "models", ":model_id"],
+              "variable": [
+                {
+                  "key": "model_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Model",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/regression/models/:model_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "regression", "models", ":model_id"],
+              "variable": [
+                {
+                  "key": "model_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Marketplaces",
+      "item": [
+        {
+          "name": "Create Marketplace",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"AutoRia\",\n    \"base_search_url\": \"https://auto.ria.com/search/\",\n    \"car_selector\": \".ticket-item\",\n    \"link_selector\": \".m-link-ticket\",\n    \"title_selector\": \".address\",\n    \"price_selector\": \".price\",\n    \"year_selector\": \".year\",\n    \"mileage_selector\": \".mileage\",\n    \"fuel_selector\": \".fuel\",\n    \"transmission_selector\": \".transmission\",\n    \"engine_capacity_selector\": \".engine-capacity\",\n    \"horse_power_selector\": \".horse-power\",\n    \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/marketplaces/create",
+              "host": ["{{base_url}}"],
+              "path": ["marketplaces", "create"]
+            }
+          }
+        },
+        {
+          "name": "Get All Marketplaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/marketplaces/get-all?active_only=true",
+              "host": ["{{base_url}}"],
+              "path": ["marketplaces", "get-all"],
+              "query": [
+                {
+                  "key": "active_only",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Marketplace by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/marketplaces/get/:marketplace_id",
+              "host": ["{{base_url}}"],
+              "path": ["marketplaces", "get", ":marketplace_id"],
+              "variable": [
+                {
+                  "key": "marketplace_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Marketplace",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated AutoRia\",\n    \"is_active\": true,\n    \"description\": \"Updated marketplace description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/marketplaces/update/:marketplace_id",
+              "host": ["{{base_url}}"],
+              "path": ["marketplaces", "update", ":marketplace_id"],
+              "variable": [
+                {
+                  "key": "marketplace_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Marketplace",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/marketplaces/delete/:marketplace_id",
+              "host": ["{{base_url}}"],
+              "path": ["marketplaces", "delete", ":marketplace_id"],
+              "variable": [
+                {
+                  "key": "marketplace_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "event": [
@@ -233,9 +449,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:8000",
-      "type": "string",
-      "description": "Базовий URL API сервера"
+      "value": "http://localhost:8000"
     }
   ]
 }
