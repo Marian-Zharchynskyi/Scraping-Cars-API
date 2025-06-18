@@ -48,5 +48,15 @@ class MarketplacesRepository:
         await session.delete(marketplace)
         await session.commit()
 
+    async def update_marketplace_status(self, marketplace_id: int, is_active: bool) -> Marketplaces:
+        session: AsyncSession = self.context
+        marketplace = await self.get_marketplace(marketplace_id)
+        if marketplace:
+            marketplace.is_active = is_active
+            await session.merge(marketplace)
+            await session.commit()
+            await session.refresh(marketplace)
+        return marketplace
+
 
 MarketplacesRepositoryDependency = Annotated[MarketplacesRepository, Depends(MarketplacesRepository)]

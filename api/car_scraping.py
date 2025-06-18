@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 import logging
 
 from services.car_scraper import CarScraper
@@ -212,3 +212,123 @@ async def get_scraped_cars_by_request(
 ):
     
     return await scraped_cars_repo.get_scraped_cars_by_request_id(request_id)
+
+
+@router.get("/get-cars-by-marketplace/{marketplace_id}", response_model=List[ScrapedCarResponse])
+async def get_cars_by_marketplace(
+    marketplace_id: int,
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    marketplaces_repo: MarketplacesRepositoryDependency,
+):
+    """
+    Get all cars scraped from a specific marketplace.
+    """
+    # Verify marketplace exists
+    marketplace = await marketplaces_repo.get_marketplace(marketplace_id)
+    if not marketplace:
+        raise HTTPException(status_code=404, detail="Marketplace not found")
+    return await scraped_cars_repo.get_cars_by_marketplace(marketplace_id)
+
+
+@router.get("/search-cars", response_model=List[ScrapedCarResponse])
+async def search_cars_by_title(
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    title: str = Query(..., description="Car title to search for"),
+):
+    """
+    Search cars by title (case-insensitive partial match).
+    Example: search for "Audi A4" will return all cars with "Audi A4" in their title.
+    """
+    return await scraped_cars_repo.search_cars_by_title(title)
+
+
+@router.get("/filter-cars/price", response_model=List[ScrapedCarResponse])
+async def filter_cars_by_price(
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    min_price: float = Query(..., description="Minimum price"),
+    max_price: float = Query(..., description="Maximum price"),
+):
+    """
+    Filter cars by price range.
+    Example: filter cars between $10,000 and $20,000.
+    """
+    return await scraped_cars_repo.filter_cars_by_price_range(min_price, max_price)
+
+
+@router.get("/filter-cars/date", response_model=List[ScrapedCarResponse])
+async def filter_cars_by_date(
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    start_date: datetime = Query(..., description="Start date"),
+    end_date: datetime = Query(..., description="End date"),
+):
+    """
+    Filter cars by scrape date range.
+    Example: filter cars scraped between January 1, 2024 and January 31, 2024.
+    """
+    return await scraped_cars_repo.filter_cars_by_scrape_date(start_date, end_date)
+
+
+@router.delete("/delete-request/{request_id}")
+async def delete_scrape_request(
+    request_id: int,
+    scrape_requests_repo: ScrapeRequestsRepositoryDependency,
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+):
+    """
+    Delete a scrape request and all associated scraped cars.
+    """
+    try:
+        # First delete all associated cars
+        await scraped_cars_repo.delete_cars_by_request_id(request_id)
+        # Then delete the request
+        await scrape_requests_repo.delete_scrape_request(request_id)
+        return {
+            "status": "success",
+            "message": f"Scrape request {request_id} and associated cars deleted successfully",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting scrape request: {str(e)}")
+
+
+@router.delete("/delete-car/{car_id}")
+async def delete_scraped_car(
+    car_id: int,
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+):
+    """
+    Delete a specific scraped car.
+    """
+    try:
+        await scraped_cars_repo.delete_scraped_car(car_id)
+        return {
+            "status": "success",
+            "message": f"Scraped car {car_id} deleted successfully",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting scraped car: {str(e)}")
+
+
+@router.delete("/delete-cars-by-marketplace/{marketplace_id}")
+async def delete_cars_by_marketplace(
+    marketplace_id: int,
+    scraped_cars_repo: ScrapedCarsRepositoryDependency,
+    marketplaces_repo: MarketplacesRepositoryDependency,
+):
+    """
+    Delete all cars scraped from a specific marketplace.
+    """
+    try:
+        # Verify marketplace exists
+        marketplace = await marketplaces_repo.get_marketplace(marketplace_id)
+        if not marketplace:
+            raise HTTPException(status_code=404, detail="Marketplace not found")
+
+        await scraped_cars_repo.delete_cars_by_marketplace(marketplace_id)
+        return {
+            "status": "success",
+            "message": f"All cars from marketplace {marketplace_id} deleted successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting cars: {str(e)}")

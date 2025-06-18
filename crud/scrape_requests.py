@@ -28,5 +28,12 @@ class ScrapeRequestsRepository:
         await session.refresh(request)
         return request
 
+    async def delete_scrape_request(self, request_id: int) -> None:
+        session: AsyncSession = self.context
+        request = await self.get_scrape_request(request_id)
+        if request:
+            await session.delete(request)
+            await session.commit()
+
 
 ScrapeRequestsRepositoryDependency = Annotated[ScrapeRequestsRepository, Depends(ScrapeRequestsRepository)]
