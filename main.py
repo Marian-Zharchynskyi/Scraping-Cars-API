@@ -15,5 +15,6 @@ app.add_middleware(
 
 app.include_router(marketplaces.router)
 app.include_router(car_scraping.router)
-app.include_router(regression.router)
-app.include_router(export.router)
+app.include_router(regression.router, prefix="/api/regression", tags=["regression"])
+app.include_router(export.router, prefix="/api", tags=["export"])
+
