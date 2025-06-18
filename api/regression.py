@@ -1,7 +1,6 @@
+from typing import List, Dict, Any, Sequence
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict, Any
 
 from db import get_db
 from schemas.regression_model import (
@@ -11,14 +10,8 @@ from schemas.regression_model import (
     ModelTrainingRequest,
     ModelPredictionRequest
 )
-
 from services.regression_service import RegressionService
-from crud.regression_model import (
-    get_model, 
-    get_models, 
-    update_model, 
-    delete_model
-)
+from crud.regression_model import RegressionModelRepository, get_regression_model_repo
 
 router = APIRouter(
     prefix="/api/regression",
@@ -35,7 +28,8 @@ router = APIRouter(
 )
 async def train_model(
     request: ModelTrainingRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    model_repo: RegressionModelRepository = Depends(get_regression_model_repo)
 ) -> Dict[str, Any]:
     """
     Train a new regression model with the provided parameters.
@@ -48,7 +42,8 @@ async def train_model(
     - **random_state**: Random seed for reproducibility (default: 42)
     """
     try:
-        service = RegressionService(db)
+        # Pass both the db session and model_repo to the service
+        service = RegressionService(db, model_repo)
         result = await service.train_model(request)
         
         if not result.get('success', False):
@@ -89,7 +84,8 @@ async def train_model(
 )
 async def make_prediction(
     request: ModelPredictionRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    model_repo: RegressionModelRepository = Depends(get_regression_model_repo)
 ) -> Dict[str, Any]:
     """
     Make a prediction using a pre-trained regression model.
@@ -121,11 +117,12 @@ async def list_models(
     limit: int = 100,
     marketplace_id: int | None = None,
     is_active: bool | None = None,
-    db: AsyncSession = Depends(get_db)
-):
-    
-    return await get_models(
-        db=db,
+    model_repo: RegressionModelRepository = Depends(get_regression_model_repo)
+) -> Sequence[RegressionModel]:
+    """
+    Get a list of all trained regression models with optional filtering.
+    """
+    return await model_repo.get_models(
         skip=skip,
         limit=limit,
         marketplace_id=marketplace_id,
@@ -133,46 +130,61 @@ async def list_models(
     )
 
 @router.get("/models/{model_id}", response_model=RegressionModel)
-async def read_model(model_id: int, db: AsyncSession = Depends(get_db)):
-    db_model = await get_model(db, model_id=model_id)
+async def read_model(
+    model_id: int,
+    model_repo: RegressionModelRepository = Depends(get_regression_model_repo)
+) -> RegressionModel:
+    db_model = await model_repo.get_model(model_id=model_id)
     if db_model is None:
         raise HTTPException(status_code=404, detail="Model not found")
     return db_model
 
 @router.put("/models/{model_id}", response_model=RegressionModel)
 async def update_existing_model(
-    model_id: int, 
+    model_id: int,
     model_update: RegressionModelUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-    db_model = await get_model(db, model_id=model_id)
-    if db_model is None:
+    model_repo: RegressionModelRepository = Depends(get_regression_model_repo)
+) -> RegressionModel:
+    updated_model = await model_repo.update_model(model_id=model_id, model_update=model_update)
+    if updated_model is None:
         raise HTTPException(status_code=404, detail="Model not found")
-    return await update_model(db, db_model=db_model, model_update=model_update)
+    return updated_model
 
-@router.delete("/models/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_model(model_id: int, db: AsyncSession = Depends(get_db)):
-    db_model = await get_model(db, model_id=model_id)
-    if db_model is None:
+@router.delete("/models/{model_id}", status_code=status.HTTP_200_OK, response_model=Dict[str, bool])
+async def remove_model(
+    model_id: int,
+    model_repo: RegressionModelRepository = Depends(get_regression_model_repo)
+) -> Dict[str, bool]:
+    success = await model_repo.delete_model(model_id=model_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Model not found")
-    await delete_model(db, model_id=model_id)
     return {"ok": True}
 
 @router.get("/models/{model_id}/importance", response_model=dict)
-async def get_feature_importance(model_id: int, db: AsyncSession = Depends(get_db)):
+async def get_feature_importance(
+    model_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
     """
     Get feature importance metrics for a trained model.
     
     - **model_id**: ID of the model to get importance for
     """
     service = RegressionService(db)
-    return await service.get_model_importance(model_id)
+    try:
+        importance = await service.get_model_importance(model_id)
+        return {"success": True, "data": importance}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to get feature importance: {str(e)}"
+        )
 
 @router.get("/models/{model_id}/coefficients-plot", response_class=Response)
 async def get_coefficients_plot(
-    model_id: int, 
+    model_id: int,
     db: AsyncSession = Depends(get_db)
-):
+) -> Response:
     """
     Generate and return a visualization of model coefficients and feature importance.
     

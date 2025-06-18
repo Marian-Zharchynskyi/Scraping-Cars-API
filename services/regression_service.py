@@ -416,13 +416,13 @@ class RegressionService:
 
     async def get_model_importance(self, model_id: int) -> Dict[str, Any]:
         """
-        Get feature importance for a trained regression model.
+        Get feature importance and detailed statistical analysis for a trained regression model.
         
         Args:
             model_id: ID of the trained model
             
         Returns:
-            Dict containing feature importance metrics
+            Dict containing feature importance metrics and detailed analysis
         """
         from models.regression_model import RegressionModel as DBRegressionModel
         
@@ -438,11 +438,24 @@ class RegressionService:
             if not model:
                 raise ValueError(f"No active model found with ID {model_id}")
             
-            # Calculate relative importance (absolute values of coefficients, normalized to sum to 1)
-            coefficients = model.coefficients
+            # Get model statistics with proper null checks
+            coefficients = model.coefficients.copy() if model.coefficients else {}
+            t_stats = getattr(model, 't_statistics', {}) or {}
+            p_values = getattr(model, 'p_values', {}) or {}
+            std_errors = getattr(model, 'standard_errors', {}) or {}
+            conf_intervals = getattr(model, 'confidence_intervals', {}) or {}
             
-            # Remove 'const' if present
-            coefficients.pop('const', None)
+            # Remove 'const' if present for feature importance - safely handle None values
+            if coefficients is not None:
+                coefficients.pop('const', None)
+            if t_stats is not None:
+                t_stats.pop('const', None)
+            if p_values is not None:
+                p_values.pop('const', None)
+            if std_errors is not None:
+                std_errors.pop('const', None)
+            if conf_intervals is not None:
+                conf_intervals.pop('const', None)
             
             if not coefficients:
                 return {
@@ -450,7 +463,7 @@ class RegressionService:
                     'error': 'No feature coefficients found in the model'
                 }
             
-            # Calculate absolute values of coefficients
+            # Calculate absolute values of coefficients for importance
             abs_coefficients = {k: abs(v) for k, v in coefficients.items()}
             total_importance = sum(abs_coefficients.values())
             
@@ -460,12 +473,77 @@ class RegressionService:
             else:
                 feature_importance = {k: 0 for k in abs_coefficients}
             
+            # Generate detailed analysis for each feature
+            feature_analysis = {}
+            for feature in coefficients.keys():
+                coef = coefficients[feature]
+                t_stat = t_stats.get(feature, 0)
+                p_val = p_values.get(feature, 1.0)
+                std_err = std_errors.get(feature, 0)
+                ci_lower, ci_upper = conf_intervals.get(feature, (0, 0))
+                
+                # Визначення статистичної значущості
+                significance = []
+                if p_val < 0.01:
+                    significance.append("дуже високо значимий (p < 0.01)")
+                elif p_val < 0.05:
+                    significance.append("значимий (p < 0.05)")
+                elif p_val < 0.1:
+                    significance.append("слабко значимий (p < 0.1)")
+                else:
+                    significance.append("незначимий (p >= 0.1)")
+                
+                # Генерація інтерпретації
+                interpretation = [
+                    f"# {feature}",
+                    f"Коефіцієнт: {coef:.4f} (Ст. помилка: {std_err:.4f})",
+                    f"t-статистика: {t_stat:.4f}",
+                    f"p-значення: {p_val:.4f} - {significance[0]}",
+                    f"95% Довірчий інтервал: [{ci_lower:.4f}, {ci_upper:.4f}]",
+                    "",
+                    "## Інтерпретація:",
+                    f"- За незмінних інших факторів, збільшення {feature} на одиницю пов'язане "
+                    f"з {'зростанням' if coef > 0 else 'зменшенням'} цільової змінної на {abs(coef):.4f}.",
+                ]
+                
+                # Інтерпретація t-критерію
+                if abs(t_stat) < 1.645:  # 90% рівень довіри (двосторонній)
+                    interpretation.append("- Коефіцієнт не є статистично значущим на рівні 10% (|t| < 1.645).")
+                else:
+                    interpretation.append(
+                        f"- Коефіцієнт є статистично значущим на рівні 10% (|t| = {abs(t_stat):.4f} > 1.645)."
+                    )
+                
+                # Інтерпретація довірчого інтервалу
+                if ci_lower * ci_upper > 0:  # Обидва значення одного знаку
+                    interpretation.append(
+                        f"- З імовірністю 95% справжній ефект {feature} знаходиться між {ci_lower:.4f} та {ci_upper:.4f}."
+                    )
+                else:
+                    interpretation.append(
+                        "- 95% довірчий інтервал містить нуль, що вказує на можливу статистичну незначимість ефекту."
+                    )
+                
+                feature_analysis[feature] = "\n".join(interpretation)
+            
             return {
                 'success': True,
                 'model_id': model_id,
                 'feature_importance': feature_importance,
                 'coefficients': coefficients,
-                'intercept': model.intercept
+                'intercept': model.intercept,
+                't_statistics': t_stats,
+                'p_values': p_values,
+                'standard_errors': std_errors,
+                'confidence_intervals': conf_intervals,
+                'feature_analysis': feature_analysis,
+                'model_summary': {
+                    'r_squared': model.r_squared,
+                    'adj_r_squared': getattr(model, 'adj_r_squared', None),
+                    'f_statistic': getattr(model, 'f_statistic', None),
+                    'f_p_value': getattr(model, 'f_p_value', None),
+                    'n_observations': getattr(model, 'n_observations', None)
+                }
             }
             
         except Exception as e:

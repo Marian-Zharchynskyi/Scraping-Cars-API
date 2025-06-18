@@ -58,7 +58,7 @@ class ExportService:
             'marketplace_name': car.marketplace.name if car.marketplace else 'Невідомо',
             'car_title': car.car_title,
             'price': car.price,
-            'currency': car.currency or 'UAH',
+            'currency': car.currency,
             'year': car.year,
             'mileage': car.mileage,
             'fuel': car.fuel or '',
