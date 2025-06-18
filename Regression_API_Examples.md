@@ -1,4 +1,4 @@
-# Regression API - Приклади запитів
+# Regression & Export API - Приклади запитів
 
 ## Базовий URL
 
@@ -180,6 +180,66 @@ GET /api/regression/models/1/importance
 GET /api/regression/models/1/coefficients-plot
 ```
 
+## 9. Експорт в CSV (POST /api/export/csv)
+
+### Приклад 1: Експорт BMW з фільтрами
+
+```json
+{
+  "car_model": "BMW",
+  "min_year": 2020,
+  "max_year": 2024,
+  "min_price": 20000,
+  "max_price": 100000,
+  "marketplace_ids": [1, 2],
+  "include_columns": ["id", "brand", "model", "year", "price", "mileage"]
+}
+```
+
+### Приклад 2: Експорт за роками
+
+```json
+{
+  "min_year": 2018,
+  "max_year": 2023,
+  "min_price": 15000,
+  "max_price": 50000
+}
+```
+
+### Приклад 3: Експорт конкретних майданчиків
+
+```json
+{
+  "marketplace_ids": [1],
+  "include_columns": [
+    "id",
+    "brand",
+    "model",
+    "year",
+    "price",
+    "mileage",
+    "engine_volume",
+    "fuel_type"
+  ]
+}
+```
+
+### Приклад 4: Експорт всіх даних (без фільтрів)
+
+```json
+{}
+```
+
+### Приклад 5: Експорт за моделлю автомобіля
+
+```json
+{
+  "car_model": "X5",
+  "min_year": 2020
+}
+```
+
 ## Приклади відповідей
 
 ### Успішне навчання моделі
@@ -284,6 +344,24 @@ GET /api/regression/models/1/coefficients-plot
 }
 ```
 
+### Експорт CSV
+
+**Відповідь**: Файл CSV з заголовками:
+
+```
+Content-Disposition: attachment; filename=cars_export_20240115_143022.csv
+Content-Type: text/csv; charset=utf-8
+```
+
+**Приклад вмісту CSV**:
+
+```csv
+id,brand,model,year,price,mileage
+1,BMW,X5,2020,45000,50000
+2,BMW,X3,2021,38000,30000
+3,BMW,X6,2022,65000,15000
+```
+
 ## Коди помилок
 
 ### 400 Bad Request
@@ -302,6 +380,14 @@ GET /api/regression/models/1/coefficients-plot
 }
 ```
 
+### 404 Not Found (для експорту)
+
+```json
+{
+  "detail": "No data found matching the specified criteria"
+}
+```
+
 ### 500 Internal Server Error
 
 ```json
@@ -309,3 +395,34 @@ GET /api/regression/models/1/coefficients-plot
   "detail": "Error training model: Database connection failed"
 }
 ```
+
+### 500 Internal Server Error (для експорту)
+
+```json
+{
+  "detail": "Помилка при експорті даних: Database connection failed"
+}
+```
+
+## Особливості експорту CSV
+
+### 📁 Файл автоматично завантажується
+
+- Назва файлу: `cars_export_YYYYMMDD_HHMMSS.csv`
+- Формат: UTF-8
+- Роздільник: кома (,)
+
+### 🔍 Фільтри експорту
+
+- **car_model**: частковий пошук по моделі
+- **min_year/max_year**: діапазон років
+- **min_price/max_price**: діапазон цін
+- **marketplace_ids**: конкретні майданчики
+- **include_columns**: вибір колонок
+
+### 📊 Доступні колонки
+
+- `id`, `brand`, `model`, `year`, `price`, `mileage`
+- `engine_volume`, `fuel_type`, `transmission`
+- `color`, `marketplace_id`, `created_at`
+- та інші поля з бази даних

@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "regression-api-collection",
-    "name": "Regression API Collection",
-    "description": "Колекція запитів для API регресійного аналізу автомобілів",
+    "name": "Regression & Export API Collection",
+    "description": "Колекція запитів для API регресійного аналізу та експорту даних автомобілів",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -164,6 +164,52 @@
           "path": ["api", "regression", "models", "1", "coefficients-plot"]
         },
         "description": "Отримання графіка коефіцієнтів регресії у вигляді PNG зображення"
+      },
+      "response": []
+    },
+    {
+      "name": "Export to CSV",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"car_model\": \"BMW\",\n  \"min_year\": 2020,\n  \"max_year\": 2024,\n  \"min_price\": 20000,\n  \"max_price\": 100000,\n  \"marketplace_ids\": [1, 2],\n  \"include_columns\": [\"id\", \"brand\", \"model\", \"year\", \"price\", \"mileage\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/export/csv",
+          "host": ["{{base_url}}"],
+          "path": ["api", "export", "csv"]
+        },
+        "description": "Експорт даних автомобілів у CSV файл з фільтрацією"
+      },
+      "response": []
+    },
+    {
+      "name": "Export All to CSV",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/export/csv",
+          "host": ["{{base_url}}"],
+          "path": ["api", "export", "csv"]
+        },
+        "description": "Експорт всіх даних автомобілів у CSV файл без фільтрів"
       },
       "response": []
     }
